@@ -51,6 +51,12 @@ var yargs = require('yargs')
       demand: false,
       describe: 'remove figlet banner'
     })
+    .option('l', {
+      alias: 'limit',
+      default: 10,
+      demand: false,
+      describe: 'Body limit size in Mb'
+    })
     .help()
     .version()
     .strict();
@@ -84,6 +90,7 @@ if (!TARGET.match(/^https?:\/\//)) {
 
 var BIND_ADDRESS = argv.b;
 var PORT = argv.p;
+var BODY_LIMIT_SIZE = argv.l;
 
 var credentials;
 var chain = new AWS.CredentialProviderChain();
@@ -105,11 +112,15 @@ var proxy = httpProxy.createProxyServer({
 });
 
 var app = express();
+app.use(bodyParser.raw({type: function() { return true; }}));
+app.use(bodyParser.json({limit: BODY_LIMIT_SIZE + 'mb'}));
+app.use(bodyParser.urlencoded({limit: BODY_LIMIT_SIZE + 'mb', extended: true}));
+
 app.use(compress());
 if (argv.u && argv.a) {
   app.use(basicAuth(argv.u, argv.a));
 }
-app.use(bodyParser.raw({type: function() { return true; }}));
+
 app.use(getCredentials);
 app.use(function (req, res) {
     var bufferStream;
